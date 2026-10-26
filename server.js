@@ -1,8 +1,12 @@
 
 require("dotenv").config();
 
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./swagger");
+
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
+
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -16,7 +20,11 @@ const PORT = process.env.PORT || 3000;
 // ========================================
 
 app.use(express.json());
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+app.get("/swagger.json", (req, res) => {
+  res.json(swaggerSpec);
+});
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -81,6 +89,21 @@ const requireAdmin = async (req, res, next) => {
   }
 };
 
+
+
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Kiểm tra trạng thái hệ thống
+ *     description: Kiểm tra Ecommerce Monolithic API có đang hoạt động hay không.
+ *     tags:
+ *       - Health
+ *     responses:
+ *       200:
+ *         description: Server đang hoạt động
+ */
+
 // ========================================
 // 1. HEALTH CHECK
 // ========================================
@@ -94,6 +117,21 @@ app.get("/health", (req, res) => {
 // ========================================
 // 2. GET ALL PRODUCTS
 // ========================================
+
+/**
+ * @swagger
+ * /products:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm
+ *     description: Trả về danh sách tất cả sản phẩm trong hệ thống.
+ *     tags:
+ *       - Products
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách sản phẩm thành công
+ *       500:
+ *         description: Lỗi máy chủ
+ */
 
 app.get("/products", async (req, res) => {
   try {
@@ -116,6 +154,33 @@ app.get("/products", async (req, res) => {
 // ========================================
 // 3. GET PRODUCT BY ID
 // ========================================
+
+/**
+ * @swagger
+ * /products/{id}:
+ *   get:
+ *     summary: Xem chi tiết sản phẩm
+ *     description: Lấy thông tin sản phẩm theo ID.
+ *     tags:
+ *       - Products
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của sản phẩm
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Lấy thông tin sản phẩm thành công
+ *       400:
+ *         description: ID sản phẩm không hợp lệ
+ *       404:
+ *         description: Không tìm thấy sản phẩm
+ *       500:
+ *         description: Lỗi máy chủ
+ */
 
 app.get("/products/:id", async (req, res) => {
   try {
@@ -150,6 +215,49 @@ app.get("/products/:id", async (req, res) => {
 // ========================================
 // 4. CREATE PRODUCT
 // ========================================
+
+/**
+ * @swagger
+ * /products:
+ *   post:
+ *     summary: Thêm sản phẩm mới
+ *     description: Tạo một sản phẩm trong hệ thống.
+ *     tags:
+ *       - Products
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pname
+ *               - price
+ *               - quantity
+ *             properties:
+ *               pname:
+ *                 type: string
+ *                 example: Tai nghe Bluetooth
+ *               price:
+ *                 type: number
+ *                 example: 850000
+ *               quantity:
+ *                 type: integer
+ *                 example: 15
+ *     responses:
+ *       201:
+ *         description: Thêm sản phẩm thành công
+ *       400:
+ *         description: Dữ liệu không hợp lệ
+ *       401:
+ *         description: Chưa đăng nhập hoặc JWT không hợp lệ
+ *       403:
+ *         description: Không có quyền thực hiện
+ *       500:
+ *         description: Lỗi máy chủ
+ */
 
 app.post("/products", async (req, res) => {
   try {
@@ -196,6 +304,59 @@ app.post("/products", async (req, res) => {
 // ========================================
 // 5. UPDATE PRODUCT
 // ========================================
+
+/**
+ * @swagger
+ * /products/{id}:
+ *   put:
+ *     summary: Cập nhật thông tin sản phẩm
+ *     description: Cập nhật sản phẩm theo ID. Chỉ Admin được phép thực hiện.
+ *     tags:
+ *       - Products
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID sản phẩm cần cập nhật
+ *         example: 6
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pname
+ *               - price
+ *               - quantity
+ *             properties:
+ *               pname:
+ *                 type: string
+ *                 example: Tai nghe Bluetooth Pro
+ *               price:
+ *                 type: number
+ *                 example: 950000
+ *               quantity:
+ *                 type: integer
+ *                 example: 20
+ *     responses:
+ *       200:
+ *         description: Cập nhật sản phẩm thành công
+ *       400:
+ *         description: Dữ liệu không hợp lệ
+ *       401:
+ *         description: Chưa đăng nhập hoặc JWT không hợp lệ
+ *       403:
+ *         description: Không có quyền thực hiện
+ *       404:
+ *         description: Không tìm thấy sản phẩm
+ *       500:
+ *         description: Lỗi máy chủ
+ */
 
 app.put("/products/:id", async (req, res) => {
   try {
@@ -261,6 +422,39 @@ app.put("/products/:id", async (req, res) => {
 // 6. DELETE PRODUCT
 // ========================================
 
+/**
+ * @swagger
+ * /products/{id}:
+ *   delete:
+ *     summary: Xóa sản phẩm
+ *     description: Xóa sản phẩm theo ID. Chỉ Admin được phép thực hiện.
+ *     tags:
+ *       - Products
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID sản phẩm cần xóa
+ *         example: 6
+ *     responses:
+ *       200:
+ *         description: Xóa sản phẩm thành công
+ *       400:
+ *         description: ID sản phẩm không hợp lệ
+ *       401:
+ *         description: Chưa đăng nhập hoặc JWT không hợp lệ
+ *       403:
+ *         description: Không có quyền thực hiện
+ *       404:
+ *         description: Không tìm thấy sản phẩm
+ *       500:
+ *         description: Lỗi máy chủ
+ */
+
 app.delete("/products/:id", async (req, res) => {
   try {
     const pid = Number(req.params.id);
@@ -300,6 +494,46 @@ app.delete("/products/:id", async (req, res) => {
 // ========================================
 // 7. REGISTER
 // ========================================
+
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Đăng ký tài khoản
+ *     description: Tạo tài khoản khách hàng mới.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - fullname
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: customer_swagger01
+ *               fullname:
+ *                 type: string
+ *                 example: Nguyen Van A
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: Test@123456
+ *     responses:
+ *       201:
+ *         description: Đăng ký tài khoản thành công
+ *       400:
+ *         description: Dữ liệu đăng ký không hợp lệ
+ *       409:
+ *         description: Tên đăng nhập đã tồn tại
+ *       500:
+ *         description: Lỗi máy chủ
+ */
 
 app.post("/auth/register", async (req, res) => {
   try {
@@ -389,6 +623,41 @@ app.post("/auth/register", async (req, res) => {
 // 8. LOGIN
 // ========================================
 
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Đăng nhập tài khoản
+ *     description: Xác thực username và password, trả về JWT.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: customer_swagger01
+ *               password:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Đăng nhập thành công, trả về JWT
+ *       400:
+ *         description: Thiếu hoặc sai định dạng dữ liệu
+ *       401:
+ *         description: Tên đăng nhập hoặc mật khẩu không đúng
+ *       500:
+ *         description: Lỗi máy chủ
+ */
+
 app.post("/auth/login", async (req, res) => {
   try {
     const { username, password } = req.body || {};
@@ -472,7 +741,26 @@ app.post("/auth/login", async (req, res) => {
 // ========================================
 // 9. GET CURRENT USER
 // ========================================
-
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Xem thông tin tài khoản đang đăng nhập
+ *     description: Lấy thông tin người dùng dựa trên JWT.
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lấy thông tin tài khoản thành công
+ *       401:
+ *         description: Chưa đăng nhập hoặc JWT không hợp lệ
+ *       404:
+ *         description: Không tìm thấy tài khoản
+ *       500:
+ *         description: Lỗi máy chủ
+ */
 app.get("/auth/me", authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -507,7 +795,59 @@ app.get("/auth/me", authenticateToken, async (req, res) => {
 // ========================================
 // 10. CREATE ORDER
 // ========================================
-
+/**
+ * @swagger
+ * /orders:
+ *   post:
+ *     summary: Tạo đơn hàng mới
+ *     description: Tạo đơn hàng cho người dùng đang đăng nhập, kiểm tra và trừ số lượng tồn kho.
+ *     tags:
+ *       - Orders
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - items
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 minItems: 1
+ *                 description: Danh sách sản phẩm trong đơn hàng, không được trùng pid.
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - pid
+ *                     - qty
+ *                   properties:
+ *                     pid:
+ *                       type: integer
+ *                       minimum: 1
+ *                       example: 1
+ *                       description: Mã sản phẩm
+ *                     qty:
+ *                       type: integer
+ *                       minimum: 1
+ *                       example: 1
+ *                       description: Số lượng mua
+ *     responses:
+ *       201:
+ *         description: Tạo đơn hàng thành công
+ *       400:
+ *         description: Dữ liệu không hợp lệ, sản phẩm trùng hoặc không đủ tồn kho
+ *       401:
+ *         description: Chưa đăng nhập hoặc JWT không hợp lệ
+ *       404:
+ *         description: Không tìm thấy sản phẩm
+ *       409:
+ *         description: Xung đột giao dịch
+ *       500:
+ *         description: Lỗi tạo đơn hàng
+ */
 app.post("/orders", authenticateToken, async (req, res) => {
   try {
     const { items } = req.body || {};
@@ -647,7 +987,67 @@ app.post("/orders", authenticateToken, async (req, res) => {
 // ========================================
 // 11. GET MY ORDERS
 // ========================================
-
+/**
+ * @swagger
+ * /orders:
+ *   get:
+ *     summary: Lấy danh sách đơn hàng của tôi
+ *     description: Lấy danh sách đơn hàng của người dùng đang đăng nhập, bao gồm chi tiết sản phẩm và tổng tiền. Đơn hàng được sắp xếp theo mã giảm dần.
+ *     tags:
+ *       - Orders
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách đơn hàng thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   oid:
+ *                     type: integer
+ *                     example: 2
+ *                   uid:
+ *                     type: integer
+ *                     example: 5
+ *                   createat:
+ *                     type: string
+ *                     format: date-time
+ *                   orderDetails:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         oid:
+ *                           type: integer
+ *                         pid:
+ *                           type: integer
+ *                           example: 1
+ *                         qty:
+ *                           type: integer
+ *                           example: 1
+ *                         unit_price:
+ *                           type: string
+ *                           example: "15000000"
+ *                         product:
+ *                           type: object
+ *                           properties:
+ *                             pid:
+ *                               type: integer
+ *                             pname:
+ *                               type: string
+ *                               example: Laptop Dell
+ *                   total:
+ *                     type: string
+ *                     example: "15000000.00"
+ *       401:
+ *         description: Chưa cung cấp JWT hoặc JWT không hợp lệ
+ *       500:
+ *         description: Lỗi lấy danh sách đơn hàng
+ */
 app.get("/orders", authenticateToken, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
@@ -699,7 +1099,79 @@ app.get("/orders", authenticateToken, async (req, res) => {
  // ========================================
  // 12. GET ORDER BY ID
  // ========================================
-
+/**
+ * @swagger
+ * /orders/{id}:
+ *   get:
+ *     summary: Xem chi tiết đơn hàng
+ *     description: Lấy thông tin chi tiết một đơn hàng thuộc người dùng đang đăng nhập.
+ *     tags:
+ *       - Orders
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Mã đơn hàng cần xem
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           example: 2
+ *     responses:
+ *       200:
+ *         description: Lấy chi tiết đơn hàng thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 oid:
+ *                   type: integer
+ *                   example: 2
+ *                 uid:
+ *                   type: integer
+ *                   example: 5
+ *                 createat:
+ *                   type: string
+ *                   format: date-time
+ *                 orderDetails:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       oid:
+ *                         type: integer
+ *                       pid:
+ *                         type: integer
+ *                         example: 1
+ *                       qty:
+ *                         type: integer
+ *                         example: 1
+ *                       unit_price:
+ *                         type: string
+ *                         example: "15000000"
+ *                       product:
+ *                         type: object
+ *                         properties:
+ *                           pid:
+ *                             type: integer
+ *                             example: 1
+ *                           pname:
+ *                             type: string
+ *                             example: Laptop Dell
+ *                 total:
+ *                   type: string
+ *                   example: "15000000.00"
+ *       400:
+ *         description: ID đơn hàng không hợp lệ
+ *       401:
+ *         description: Chưa cung cấp JWT hoặc JWT không hợp lệ
+ *       404:
+ *         description: Không tìm thấy đơn hàng hoặc đơn hàng không thuộc người dùng
+ *       500:
+ *         description: Lỗi lấy chi tiết đơn hàng
+ */
 app.get("/orders/:id", authenticateToken, async (req, res) => {
   try {
     const oid = Number(req.params.id);
@@ -759,7 +1231,65 @@ app.get("/orders/:id", authenticateToken, async (req, res) => {
  // ========================================
  // 13. CREATE SHIPMENT - ADMIN ONLY
  // ========================================
-
+/**
+ * @swagger
+ * /shipments:
+ *   post:
+ *     summary: Tạo thông tin vận chuyển
+ *     description: Chỉ Admin được tạo thông tin vận chuyển cho đơn hàng. Mỗi đơn hàng chỉ được tạo một thông tin vận chuyển.
+ *     tags:
+ *       - Shipments
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - oid
+ *             properties:
+ *               oid:
+ *                 type: integer
+ *                 minimum: 1
+ *                 example: 2
+ *                 description: Mã đơn hàng cần tạo vận chuyển
+ *     responses:
+ *       201:
+ *         description: Tạo thông tin vận chuyển thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Tao thong tin van chuyen thanh cong
+ *                 shipment:
+ *                   type: object
+ *                   properties:
+ *                     shipid:
+ *                       type: integer
+ *                     oid:
+ *                       type: integer
+ *                       example: 2
+ *                     status:
+ *                       type: string
+ *                       example: Pending
+ *       400:
+ *         description: ID đơn hàng không hợp lệ
+ *       401:
+ *         description: Chưa cung cấp JWT hoặc JWT không hợp lệ
+ *       403:
+ *         description: Không có quyền Admin
+ *       404:
+ *         description: Không tìm thấy đơn hàng
+ *       409:
+ *         description: Đơn hàng đã có thông tin vận chuyển
+ *       500:
+ *         description: Lỗi tạo thông tin vận chuyển
+ */
 app.post(
   "/shipments",
   authenticateToken,
@@ -818,7 +1348,59 @@ app.post(
  // ========================================
  // 14. GET SHIPMENT BY ORDER ID
  // ========================================
-
+/**
+ * @swagger
+ * /shipments/{orderId}:
+ *   get:
+ *     summary: Xem thông tin vận chuyển theo đơn hàng
+ *     description: Admin có thể xem thông tin vận chuyển của mọi đơn hàng. Customer chỉ được xem thông tin vận chuyển của đơn hàng thuộc mình.
+ *     tags:
+ *       - Shipments
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         description: Mã đơn hàng cần xem thông tin vận chuyển
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           example: 2
+ *     responses:
+ *       200:
+ *         description: Lấy thông tin vận chuyển thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 oid:
+ *                   type: integer
+ *                   example: 2
+ *                 shipments:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       shipid:
+ *                         type: integer
+ *                         example: 2
+ *                       oid:
+ *                         type: integer
+ *                         example: 2
+ *                       status:
+ *                         type: string
+ *                         example: Pending
+ *       400:
+ *         description: ID đơn hàng không hợp lệ
+ *       401:
+ *         description: Chưa cung cấp JWT, JWT không hợp lệ hoặc tài khoản không tồn tại
+ *       404:
+ *         description: Không tìm thấy đơn hàng hoặc đơn hàng không thuộc người dùng
+ *       500:
+ *         description: Lỗi lấy thông tin vận chuyển
+ */
 app.get("/shipments/:orderId", authenticateToken, async (req, res) => {
   try {
     const oid = Number(req.params.orderId);
@@ -878,7 +1460,78 @@ app.get("/shipments/:orderId", authenticateToken, async (req, res) => {
  // ========================================
  // 15. UPDATE SHIPMENT STATUS - ADMIN ONLY
  // ========================================
-
+/**
+ * @swagger
+ * /shipments/{id}/status:
+ *   put:
+ *     summary: Cập nhật trạng thái vận chuyển
+ *     description: Chỉ Admin được cập nhật trạng thái vận chuyển. Quy trình hợp lệ là Pending → Shipping → Delivered. Không được bỏ qua bước hoặc quay lại trạng thái trước đó.
+ *     tags:
+ *       - Shipments
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Mã vận chuyển cần cập nhật
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           example: 2
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum:
+ *                   - Pending
+ *                   - Shipping
+ *                   - Delivered
+ *                 example: Shipping
+ *                 description: Trạng thái vận chuyển mới
+ *     responses:
+ *       200:
+ *         description: Cập nhật trạng thái vận chuyển thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Cap nhat trang thai van chuyen thanh cong
+ *                 shipment:
+ *                   type: object
+ *                   properties:
+ *                     shipid:
+ *                       type: integer
+ *                       example: 2
+ *                     oid:
+ *                       type: integer
+ *                       example: 2
+ *                     status:
+ *                       type: string
+ *                       example: Shipping
+ *       400:
+ *         description: ID vận chuyển hoặc trạng thái không hợp lệ
+ *       401:
+ *         description: Chưa cung cấp JWT hoặc JWT không hợp lệ
+ *       403:
+ *         description: Không có quyền Admin
+ *       404:
+ *         description: Không tìm thấy thông tin vận chuyển
+ *       409:
+ *         description: Chuyển trạng thái không hợp lệ hoặc xảy ra xung đột cập nhật
+ *       500:
+ *         description: Lỗi cập nhật trạng thái vận chuyển
+ */
 app.put(
   "/shipments/:id/status",
   authenticateToken,
